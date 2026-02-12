@@ -1,0 +1,3629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engineering Resource Planner</title>
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        /* ===== CSS VARIABLES ===== */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #dbeafe;
+            --success: #16a34a;
+            --success-light: #dcfce7;
+            --warning: #ca8a04;
+            --warning-light: #fef9c3;
+            --danger: #dc2626;
+            --danger-light: #fee2e2;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --electrical: #8b5cf6;
+            --mechanical: #f97316;
+            --combined: #06b6d4;
+            --sidebar-width: 220px;
+        }
+
+        /* ===== RESET & BASE ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            line-height: 1.5;
+        }
+
+        /* ===== LAYOUT ===== */
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--gray-800);
+            color: white;
+            padding: 1rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 1rem 1rem;
+            border-bottom: 1px solid var(--gray-700);
+            margin-bottom: 1rem;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .sidebar-header p {
+            font-size: 0.75rem;
+            color: var(--gray-400);
+            margin-top: 0.25rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: var(--gray-300);
+            cursor: pointer;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--gray-700);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: var(--gray-700);
+            color: white;
+            border-left-color: var(--primary);
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 0.75rem;
+        }
+
+        .nav-section {
+            margin-top: 1.5rem;
+            padding: 0 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: var(--gray-500);
+            letter-spacing: 0.05em;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 1.5rem;
+            min-height: 100vh;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .page-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+        }
+
+        .btn svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+        }
+
+        .btn-icon svg {
+            margin: 0;
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.25rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+
+        /* ===== SUMMARY CARDS (Dashboard) ===== */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .summary-card-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--gray-500);
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .summary-card-sub {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            margin-top: 0.25rem;
+        }
+
+        /* ===== TABLES ===== */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        th {
+            background: var(--gray-50);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--gray-600);
+        }
+
+        tr:hover {
+            background: var(--gray-50);
+        }
+
+        /* ===== BADGES ===== */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .badge-electrical {
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+
+        .badge-mechanical {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+
+        .badge-both {
+            background: #cffafe;
+            color: #0891b2;
+        }
+
+        .badge-success {
+            background: var(--success-light);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: var(--warning-light);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .badge-gray {
+            background: var(--gray-200);
+            color: var(--gray-600);
+        }
+
+        /* ===== FORMS ===== */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 0.375rem;
+        }
+
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        /* ===== MODAL ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 0.5rem;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+
+        .modal-lg {
+            max-width: 700px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .modal-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--gray-500);
+            padding: 0.25rem;
+        }
+
+        .modal-close:hover {
+            color: var(--gray-700);
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--gray-200);
+            background: var(--gray-50);
+        }
+
+        /* ===== GANTT CHART ===== */
+        .gantt-container {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .gantt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .gantt-controls {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .gantt-wrapper {
+            display: flex;
+            overflow-x: auto;
+        }
+
+        .gantt-labels {
+            flex-shrink: 0;
+            width: 250px;
+            border-right: 1px solid var(--gray-200);
+        }
+
+        .gantt-label-header {
+            height: 60px;
+            padding: 0.5rem 1rem;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .gantt-label-row {
+            height: 40px;
+            padding: 0 1rem;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--gray-100);
+            font-size: 0.8rem;
+        }
+
+        .gantt-label-row.project {
+            background: var(--gray-50);
+            font-weight: 600;
+        }
+
+        .gantt-label-row.task {
+            padding-left: 2rem;
+            color: var(--gray-600);
+        }
+
+        .gantt-timeline {
+            flex: 1;
+            min-width: 800px;
+        }
+
+        .gantt-dates {
+            height: 60px;
+            display: flex;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .gantt-date-cell {
+            flex-shrink: 0;
+            text-align: center;
+            border-right: 1px solid var(--gray-200);
+            font-size: 0.7rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .gantt-date-day {
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        .gantt-date-weekday {
+            color: var(--gray-500);
+        }
+
+        .gantt-rows {
+            position: relative;
+        }
+
+        .gantt-row {
+            height: 40px;
+            display: flex;
+            border-bottom: 1px solid var(--gray-100);
+            position: relative;
+        }
+
+        .gantt-row.project {
+            background: var(--gray-50);
+        }
+
+        .gantt-cell {
+            flex-shrink: 0;
+            border-right: 1px solid var(--gray-100);
+        }
+
+        .gantt-cell.weekend {
+            background: var(--gray-100);
+        }
+
+        .gantt-cell.today {
+            background: var(--primary-light);
+        }
+
+        .gantt-bar {
+            position: absolute;
+            height: 24px;
+            top: 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 0.5rem;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 10;
+        }
+
+        .gantt-bar.electrical {
+            background: var(--electrical);
+        }
+
+        .gantt-bar.mechanical {
+            background: var(--mechanical);
+        }
+
+        .gantt-bar.combined {
+            background: var(--combined);
+        }
+
+        .gantt-bar.complete {
+            opacity: 0.6;
+        }
+
+        .gantt-timeoff {
+            position: absolute;
+            height: 100%;
+            top: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 5px,
+                rgba(220, 38, 38, 0.1) 5px,
+                rgba(220, 38, 38, 0.1) 10px
+            );
+            border-left: 2px solid var(--danger);
+            z-index: 5;
+        }
+
+        /* ===== CALENDAR ===== */
+        .calendar {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .calendar-day-header {
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            background: var(--gray-50);
+        }
+
+        .calendar-day {
+            min-height: 80px;
+            padding: 0.25rem;
+            border: 1px solid var(--gray-200);
+            border-top: none;
+            border-left: none;
+        }
+
+        .calendar-day:nth-child(7n) {
+            border-right: none;
+        }
+
+        .calendar-day.other-month {
+            background: var(--gray-50);
+            color: var(--gray-400);
+        }
+
+        .calendar-day.today {
+            background: var(--primary-light);
+        }
+
+        .calendar-day-number {
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .calendar-event {
+            font-size: 0.65rem;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            margin-bottom: 0.125rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .calendar-event.vacation {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .calendar-event.sick {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .calendar-event.pto {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .calendar-event.holiday {
+            background: #fef9c3;
+            color: #ca8a04;
+        }
+
+        /* ===== WORKLOAD CHART ===== */
+        .workload-chart {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .workload-bar-container {
+            flex: 1;
+        }
+
+        .workload-bar-label {
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .workload-bar-wrapper {
+            height: 24px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .workload-bar {
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .workload-bar.normal {
+            background: var(--success);
+        }
+
+        .workload-bar.warning {
+            background: var(--warning);
+        }
+
+        .workload-bar.danger {
+            background: var(--danger);
+        }
+
+        /* ===== ALERTS ===== */
+        .alert {
+            padding: 0.75rem 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-warning {
+            background: var(--warning-light);
+            color: #92400e;
+        }
+
+        .alert-danger {
+            background: var(--danger-light);
+            color: #991b1b;
+        }
+
+        .alert svg {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        /* ===== UTILITIES ===== */
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+        .text-gray { color: var(--gray-500); }
+        .font-medium { font-weight: 500; }
+        .font-semibold { font-weight: 600; }
+        .mt-1 { margin-top: 0.25rem; }
+        .mt-2 { margin-top: 0.5rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .flex { display: flex; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-4 { gap: 1rem; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+
+        /* ===== ACTION BUTTONS IN TABLES ===== */
+        .action-btns {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .action-btn {
+            padding: 0.25rem 0.5rem;
+            background: none;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.25rem;
+            cursor: pointer;
+            color: var(--gray-600);
+            font-size: 0.7rem;
+        }
+
+        .action-btn:hover {
+            background: var(--gray-100);
+        }
+
+        .action-btn.delete:hover {
+            background: var(--danger-light);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        /* ===== DATA CONTROLS ===== */
+        .data-controls {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: var(--gray-50);
+            border-top: 1px solid var(--gray-200);
+            margin-top: auto;
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--gray-500);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* ===== TASK LIST IN PROJECT ===== */
+        .task-list {
+            border: 1px solid var(--gray-200);
+            border-radius: 0.375rem;
+            margin-top: 0.5rem;
+        }
+
+        .task-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-item:last-child {
+            border-bottom: none;
+        }
+
+        .task-item-info {
+            flex: 1;
+        }
+
+        .task-item-name {
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .task-item-meta {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-top: 0.25rem;
+        }
+
+        /* ===== PROGRESS BAR ===== */
+        .progress-bar {
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+
+        .progress-fill.success {
+            background: var(--success);
+        }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--gray-200);
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: var(--gray-500);
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .tab:hover {
+            color: var(--gray-700);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* ===== FILTER BAR ===== */
+        .filter-bar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar .form-select {
+            width: auto;
+            min-width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h1>ENG Resource Planner</h1>
+                <p>Capacity & Scheduling</p>
+            </div>
+
+            <div class="nav-section">Main</div>
+            <div class="nav-item active" data-page="dashboard">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                Dashboard
+            </div>
+            <div class="nav-item" data-page="gantt">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                Gantt Chart
+            </div>
+
+            <div class="nav-section">Manage</div>
+            <div class="nav-item" data-page="engineers">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                Engineers
+            </div>
+            <div class="nav-item" data-page="projects">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                Projects
+            </div>
+            <div class="nav-item" data-page="timeoff">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                Time Off
+            </div>
+
+            <div class="nav-section">Reports</div>
+            <div class="nav-item" data-page="reports">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Reports
+            </div>
+
+            <div class="nav-section">Data</div>
+            <div class="data-controls" style="flex-direction:column;gap:0.5rem;padding:0.5rem 1rem">
+                <button class="btn btn-primary btn-sm" style="width:100%" onclick="document.getElementById('importMondayFile').click()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Monday.com Import
+                </button>
+                <input type="file" id="importMondayFile" accept=".xlsx,.xls" style="display:none" onchange="importMondayData(event)">
+                <div style="display:flex;gap:0.5rem">
+                    <button class="btn btn-secondary btn-sm" style="flex:1" onclick="exportData()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export
+                    </button>
+                    <button class="btn btn-secondary btn-sm" style="flex:1" onclick="document.getElementById('importFile').click()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Import
+                    </button>
+                </div>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+                <button class="btn btn-danger btn-sm" style="width:100%;margin-top:0.5rem" onclick="deleteAllProjects()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:14px;height:14px;margin-right:4px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Delete All Projects
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <div class="page-header">
+                    <h2>Dashboard</h2>
+                    <span class="text-sm text-gray" id="currentDate"></span>
+                </div>
+
+                <div class="summary-cards" id="summaryCards">
+                    <!-- Populated by JS -->
+                </div>
+
+                <div id="dashboardAlerts">
+                    <!-- Populated by JS -->
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">This Week's Workload</span>
+                        </div>
+                        <div id="weeklyWorkloadChart">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Upcoming Time Off</span>
+                        </div>
+                        <div id="upcomingTimeOff">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gantt Chart Page -->
+            <div id="page-gantt" class="page">
+                <div class="page-header">
+                    <h2>Gantt Chart</h2>
+                </div>
+                <div class="gantt-container">
+                    <div class="gantt-header">
+                        <div class="gantt-controls">
+                            <select class="form-select" id="ganttFilter" style="width:150px">
+                                <option value="all">All Projects</option>
+                                <option value="active">Active Only</option>
+                            </select>
+                            <select class="form-select" id="ganttEngineerFilter" style="width:150px">
+                                <option value="all">All Engineers</option>
+                            </select>
+                        </div>
+                        <div class="gantt-controls">
+                            <button class="btn btn-secondary btn-sm" onclick="ganttPrev()">← Prev</button>
+                            <button class="btn btn-secondary btn-sm" onclick="ganttToday()">Today</button>
+                            <button class="btn btn-secondary btn-sm" onclick="ganttNext()">Next →</button>
+                        </div>
+                    </div>
+                    <div class="gantt-wrapper" id="ganttWrapper">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Engineers Page -->
+            <div id="page-engineers" class="page">
+                <div class="page-header">
+                    <h2>Engineers</h2>
+                    <button class="btn btn-primary" onclick="openEngineerModal()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Add Engineer
+                    </button>
+                </div>
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Hours/Day</th>
+                                    <th>Skills</th>
+                                    <th>Current Load</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="engineersTableBody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects Page -->
+            <div id="page-projects" class="page">
+                <div class="page-header">
+                    <h2>Projects</h2>
+                    <button class="btn btn-primary" onclick="openProjectModal()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Add Project
+                    </button>
+                </div>
+                <div class="filter-bar">
+                    <select class="form-select" id="projectStatusFilter" onchange="renderProjects()">
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="complete">Complete</option>
+                        <option value="on-hold">On Hold</option>
+                    </select>
+                    <select class="form-select" id="projectTypeFilter" onchange="renderProjects()">
+                        <option value="all">All Types</option>
+                        <option value="electrical">Electrical</option>
+                        <option value="mechanical">Mechanical</option>
+                        <option value="combined">Combined</option>
+                    </select>
+                </div>
+                <div id="projectsList">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Time Off Page -->
+            <div id="page-timeoff" class="page">
+                <div class="page-header">
+                    <h2>Time Off</h2>
+                    <button class="btn btn-primary" onclick="openTimeOffModal()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Add Time Off
+                    </button>
+                </div>
+                <div class="calendar" id="timeOffCalendar">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div id="page-reports" class="page">
+                <div class="page-header">
+                    <h2>Reports</h2>
+                </div>
+                <div class="tabs">
+                    <div class="tab active" data-report="workload">Weekly Workload</div>
+                    <div class="tab" data-report="capacity">Capacity Forecast</div>
+                    <div class="tab" data-report="projects">Project Status</div>
+                    <div class="tab" data-report="etohealth">ETO Data Health</div>
+                </div>
+                <div id="reportContent">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Engineer Modal -->
+    <div class="modal-overlay" id="engineerModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="engineerModalTitle">Add Engineer</h3>
+                <button class="modal-close" onclick="closeModal('engineerModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="engineerId">
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-input" id="engineerName" placeholder="Enter name">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" id="engineerType">
+                            <option value="electrical">Electrical</option>
+                            <option value="mechanical">Mechanical</option>
+                            <option value="both">Both</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hours per Day</label>
+                        <input type="number" class="form-input" id="engineerHours" value="8" min="1" max="12">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Skills (comma-separated)</label>
+                    <input type="text" class="form-input" id="engineerSkills" placeholder="e.g., schematics, bom, plc, 3d-modeling">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('engineerModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEngineer()">Save Engineer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div class="modal-overlay" id="projectModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="projectModalTitle">Add Project</h3>
+                <button class="modal-close" onclick="closeModal('projectModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="projectId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Job Number</label>
+                        <input type="text" class="form-input" id="projectJobNumber" placeholder="e.g., 2024-ENG-001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Project Name</label>
+                        <input type="text" class="form-input" id="projectName" placeholder="Enter project name">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select class="form-select" id="projectType">
+                            <option value="electrical">Electrical</option>
+                            <option value="mechanical">Mechanical</option>
+                            <option value="combined">Combined</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="projectStatus">
+                            <option value="active">Active</option>
+                            <option value="on-hold">On Hold</option>
+                            <option value="complete">Complete</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-input" id="projectStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Target Date</label>
+                        <input type="date" class="form-input" id="projectTargetDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tasks</label>
+                    <div class="task-list" id="projectTaskList">
+                        <!-- Populated by JS -->
+                    </div>
+                    <button class="btn btn-secondary btn-sm mt-2" onclick="addTaskRow()">+ Add Task</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('projectModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProject()">Save Project</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Off Modal -->
+    <div class="modal-overlay" id="timeOffModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="timeOffModalTitle">Add Time Off</h3>
+                <button class="modal-close" onclick="closeModal('timeOffModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="timeOffId">
+                <div class="form-group">
+                    <label class="form-label">Engineer</label>
+                    <select class="form-select" id="timeOffEngineer">
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" id="timeOffType">
+                        <option value="vacation">Vacation</option>
+                        <option value="sick">Sick</option>
+                        <option value="pto">PTO</option>
+                        <option value="holiday">Holiday</option>
+                        <option value="training">Training</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-input" id="timeOffStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">End Date</label>
+                        <input type="date" class="form-input" id="timeOffEndDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-textarea" id="timeOffNotes" rows="2" placeholder="Optional notes"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="timeOffDeleteBtn" onclick="const id = document.getElementById('timeOffId').value; if(id) { closeModal('timeOffModal'); deleteTimeOff(id); }" style="display: none; margin-right: auto;">Delete</button>
+                <button class="btn btn-secondary" onclick="closeModal('timeOffModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTimeOff()">Save Time Off</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal (for editing individual tasks) -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Edit Task</h3>
+                <button class="modal-close" onclick="closeModal('taskModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="taskProjectId">
+                <input type="hidden" id="taskId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Task Type</label>
+                        <select class="form-select" id="taskType" onchange="onTaskTypeChange()">
+                            <option value="ES">ES - Electrical Schematics</option>
+                            <option value="ML">ML - Mechanical Layout</option>
+                            <option value="BOM">BOM - Bill of Materials</option>
+                            <option value="other">Other (custom)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="customTaskTypeGroup" style="display:none">
+                        <label class="form-label">Custom Task Name</label>
+                        <input type="text" class="form-input" id="taskCustomName" placeholder="Enter custom task name">
+                    </div>
+                </div>
+                <div class="form-group" id="taskNameGroup">
+                    <label class="form-label">Task Name</label>
+                    <input type="text" class="form-input" id="taskName" readonly>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Assigned To</label>
+                        <select class="form-select" id="taskAssignedTo">
+                            <!-- Populated by JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estimated Hours</label>
+                        <input type="number" class="form-input" id="taskEstimatedHours" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Actual Hours</label>
+                        <input type="number" class="form-input" id="taskActualHours" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-input" id="taskStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">End Date</label>
+                        <input type="date" class="form-input" id="taskEndDate">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="taskStatus">
+                            <option value="not-started">Not Started</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="complete">Complete</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Deliverable</label>
+                        <select class="form-select" id="taskDeliverable">
+                            <option value="schematic">Schematic</option>
+                            <option value="bom">BOM</option>
+                            <option value="3d-model">3D Model</option>
+                            <option value="assembly">Assembly Drawing</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('taskModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== DATA STORAGE =====
+        const STORAGE_KEY = 'engResourcePlanner';
+
+        let appData = {
+            engineers: [],
+            projects: [],
+            timeoff: []
+        };
+
+        // ===== SAMPLE DATA =====
+        const sampleData = {
+            engineers: [
+                { id: 'd1', name: 'John Smith', type: 'electrical', hoursPerDay: 8, skills: ['schematics', 'plc', 'panel-layout'], active: true },
+                { id: 'd2', name: 'Sarah Johnson', type: 'electrical', hoursPerDay: 8, skills: ['schematics', 'bom', 'cable-design'], active: true },
+                { id: 'd3', name: 'Mike Williams', type: 'mechanical', hoursPerDay: 8, skills: ['3d-modeling', 'assemblies', 'sheet-metal'], active: true },
+                { id: 'd4', name: 'Emily Davis', type: 'both', hoursPerDay: 8, skills: ['schematics', '3d-modeling', 'bom'], active: true }
+            ],
+            projects: [
+                {
+                    id: 'p1',
+                    jobNumber: '2024-ENG-001',
+                    name: 'Control Panel Upgrade',
+                    type: 'electrical',
+                    startDate: getTodayOffset(-5),
+                    targetDate: getTodayOffset(25),
+                    status: 'active',
+                    tasks: [
+                        { id: 't1', name: 'Power Distribution Schematic', assignedTo: 'd1', estimatedHours: 24, startDate: getTodayOffset(-5), endDate: getTodayOffset(2), status: 'in-progress', deliverable: 'schematic' },
+                        { id: 't2', name: 'Control Wiring Schematic', assignedTo: 'd2', estimatedHours: 32, startDate: getTodayOffset(3), endDate: getTodayOffset(12), status: 'not-started', deliverable: 'schematic' },
+                        { id: 't3', name: 'Bill of Materials', assignedTo: 'd2', estimatedHours: 8, startDate: getTodayOffset(13), endDate: getTodayOffset(15), status: 'not-started', deliverable: 'bom' }
+                    ]
+                },
+                {
+                    id: 'p2',
+                    jobNumber: '2024-ENG-002',
+                    name: 'Conveyor System Design',
+                    type: 'mechanical',
+                    startDate: getTodayOffset(-10),
+                    targetDate: getTodayOffset(30),
+                    status: 'active',
+                    tasks: [
+                        { id: 't4', name: 'Frame Assembly 3D Model', assignedTo: 'd3', estimatedHours: 40, startDate: getTodayOffset(-10), endDate: getTodayOffset(5), status: 'in-progress', deliverable: '3d-model' },
+                        { id: 't5', name: 'Drive Assembly Design', assignedTo: 'd3', estimatedHours: 24, startDate: getTodayOffset(6), endDate: getTodayOffset(15), status: 'not-started', deliverable: '3d-model' },
+                        { id: 't6', name: 'Assembly Drawings', assignedTo: 'd4', estimatedHours: 16, startDate: getTodayOffset(16), endDate: getTodayOffset(22), status: 'not-started', deliverable: 'assembly' }
+                    ]
+                },
+                {
+                    id: 'p3',
+                    jobNumber: '2024-ENG-003',
+                    name: 'Machine Retrofit',
+                    type: 'combined',
+                    startDate: getTodayOffset(5),
+                    targetDate: getTodayOffset(40),
+                    status: 'active',
+                    tasks: [
+                        { id: 't7', name: 'Electrical Layout', assignedTo: 'd1', estimatedHours: 16, startDate: getTodayOffset(5), endDate: getTodayOffset(10), status: 'not-started', deliverable: 'schematic' },
+                        { id: 't8', name: 'Mechanical Modifications', assignedTo: 'd3', estimatedHours: 32, startDate: getTodayOffset(11), endDate: getTodayOffset(25), status: 'not-started', deliverable: '3d-model' },
+                        { id: 't9', name: 'Combined BOM', assignedTo: 'd4', estimatedHours: 12, startDate: getTodayOffset(26), endDate: getTodayOffset(30), status: 'not-started', deliverable: 'bom' }
+                    ]
+                }
+            ],
+            timeoff: [
+                { id: 'to1', engineerId: 'd1', type: 'vacation', startDate: getTodayOffset(14), endDate: getTodayOffset(18), notes: 'Family vacation' },
+                { id: 'to2', engineerId: 'd3', type: 'pto', startDate: getTodayOffset(7), endDate: getTodayOffset(7), notes: 'Appointment' },
+                { id: 'to3', engineerId: 'd2', type: 'training', startDate: getTodayOffset(20), endDate: getTodayOffset(21), notes: 'AutoCAD training' }
+            ]
+        };
+
+        function getTodayOffset(days) {
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            return d.toISOString().split('T')[0];
+        }
+
+        // ===== DATA FUNCTIONS =====
+        function loadData() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored) {
+                appData = JSON.parse(stored);
+
+                // Data migration: designers -> engineers (for existing data)
+                if (appData.designers && !appData.engineers) {
+                    appData.engineers = appData.designers;
+                    delete appData.designers;
+                    // Also migrate timeoff designerId -> engineerId
+                    if (appData.timeoff) {
+                        appData.timeoff.forEach(to => {
+                            if (to.designerId && !to.engineerId) {
+                                to.engineerId = to.designerId;
+                                delete to.designerId;
+                            }
+                        });
+                    }
+                    saveData();
+                    console.log('Data migrated: designers -> engineers');
+                }
+
+                // Ensure engineers array exists
+                if (!appData.engineers) {
+                    appData.engineers = [];
+                }
+            } else {
+                // Load sample data on first run
+                appData = JSON.parse(JSON.stringify(sampleData));
+                saveData();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(appData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `eng-resource-planner-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function deleteAllProjects() {
+            if (confirm('Are you sure you want to delete ALL projects? This cannot be undone.')) {
+                appData.projects = [];
+                saveData();
+                renderAll();
+                alert('All projects have been deleted.');
+            }
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.engineers && imported.projects && imported.timeoff) {
+                        appData = imported;
+                        saveData();
+                        renderAll();
+                        alert('Data imported successfully!');
+                    } else {
+                        alert('Invalid data file format');
+                    }
+                } catch (err) {
+                    alert('Error reading file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function generateId() {
+            return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // ===== NAVIGATION =====
+        function navigateTo(pageName) {
+            // Update nav
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.page === pageName);
+            });
+
+            // Update pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.toggle('active', page.id === `page-${pageName}`);
+            });
+
+            // Render page content
+            switch(pageName) {
+                case 'dashboard': renderDashboard(); break;
+                case 'gantt': renderGantt(); break;
+                case 'engineers': renderEngineers(); break;
+                case 'projects': renderProjects(); break;
+                case 'timeoff': renderTimeOff(); break;
+                case 'reports': renderReports(); break;
+            }
+        }
+
+        // ===== UTILITY FUNCTIONS =====
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function formatDateFull(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function getEngineerName(id) {
+            const d = appData.engineers.find(d => d.id === id);
+            return d ? d.name : 'Unassigned';
+        }
+
+        function getEngineerById(id) {
+            return appData.engineers.find(d => d.id === id);
+        }
+
+        function daysBetween(start, end) {
+            const s = new Date(start + 'T00:00:00');
+            const e = new Date(end + 'T00:00:00');
+            return Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        function isWeekend(date) {
+            const d = new Date(date + 'T00:00:00');
+            return d.getDay() === 0 || d.getDay() === 6;
+        }
+
+        // Helper to get ISO week number
+        function getWeekNumber(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const jan1 = new Date(date.getFullYear(), 0, 1);
+            const days = Math.floor((date - jan1) / 86400000);
+            return Math.ceil((days + jan1.getDay() + 1) / 7);
+        }
+
+        // Get Sunday start of the week containing the given date
+        function getSundayOfWeek(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            const day = date.getDay();
+            const diff = date.getDate() - day;
+            const sunday = new Date(date.setDate(diff));
+            return sunday.toISOString().split('T')[0];
+        }
+
+        function getWorkingDays(startDate, endDate) {
+            let count = 0;
+            let current = new Date(startDate + 'T00:00:00');
+            const end = new Date(endDate + 'T00:00:00');
+
+            while (current <= end) {
+                if (current.getDay() !== 0 && current.getDay() !== 6) {
+                    count++;
+                }
+                current.setDate(current.getDate() + 1);
+            }
+            return count;
+        }
+
+        function getTimeOffForEngineer(engineerId, startDate, endDate) {
+            return appData.timeoff.filter(to => {
+                if (to.engineerId !== engineerId) return false;
+                return !(to.endDate < startDate || to.startDate > endDate);
+            });
+        }
+
+        function getTimeOffHours(engineerId, startDate, endDate) {
+            const engineer = getEngineerById(engineerId);
+            if (!engineer) return 0;
+
+            const timeoffs = getTimeOffForEngineer(engineerId, startDate, endDate);
+            let totalHours = 0;
+
+            timeoffs.forEach(to => {
+                // Ensure all dates are strings in YYYY-MM-DD format
+                const toStart = String(to.startDate || '').trim();
+                const toEnd = String(to.endDate || '').trim();
+                const rangeStart = String(startDate || '').trim();
+                const rangeEnd = String(endDate || '').trim();
+                
+                // Calculate overlap period (inclusive on both ends)
+                const overlapStart = toStart >= rangeStart ? toStart : rangeStart;
+                const overlapEnd = toEnd <= rangeEnd ? toEnd : rangeEnd;
+                
+                // Only count if there is actual overlap
+                if (overlapStart <= overlapEnd) {
+                    const days = getWorkingDays(overlapStart, overlapEnd);
+                    totalHours += days * engineer.hoursPerDay;
+                }
+            });
+
+            return totalHours;
+        }
+
+        // Update project.status to 'late' if engineering timeline passed but tasks remain incomplete.
+        function refreshProjectStatuses() {
+            const today = new Date().toISOString().split('T')[0];
+            appData.projects.forEach(p => {
+                if (!p.targetDate) return; // no timeline to judge
+                if (p.status === 'complete' || p.status === 'on-hold') return;
+
+                // If targetDate is in the past and any task is not complete, mark as 'late'
+                if (p.targetDate < today) {
+                    const hasIncomplete = p.tasks && p.tasks.some(t => t.status !== 'complete');
+                    if (hasIncomplete) {
+                        p.status = 'late';
+                    } else if (p.status === 'late') {
+                        // if previously late but now no incomplete tasks, restore to active
+                        p.status = 'active';
+                    }
+                } else {
+                    // If timeline not passed, ensure we don't keep 'late' flag
+                    if (p.status === 'late') p.status = 'active';
+                }
+            });
+        }
+
+        function getAvailableHours(engineerId, startDate, endDate) {
+            const engineer = getEngineerById(engineerId);
+            if (!engineer) return 0;
+
+            const workingDays = getWorkingDays(startDate, endDate);
+            const totalHours = workingDays * engineer.hoursPerDay;
+            const timeOffHours = getTimeOffHours(engineerId, startDate, endDate);
+
+            return totalHours - timeOffHours;
+        }
+
+        function getAssignedHours(engineerId, startDate, endDate) {
+            let totalHours = 0;
+
+            appData.projects.forEach(project => {
+                if (project.status === 'complete' || project.status === 'on-hold') return;
+
+                project.tasks.forEach(task => {
+                    if (task.assignedTo !== engineerId) return;
+                    // Treat a task as completed only when actualHours >= estimatedHours.
+                    // Some tasks may be marked 'complete' in the sheet but still have remaining hours — include those in workload.
+                    if (typeof task.estimatedHours === 'number' && typeof task.actualHours === 'number' && task.actualHours >= task.estimatedHours) return;
+
+                    // Determine the authoritative work window for workload calculation.
+                    // Prefer ES/ML specific start/end if present, otherwise fall back to task.startDate/task.endDate.
+                    let workStart = task.esStart || task.mlStart || task.startDate || '';
+                    let workEnd = task.esEnd || task.mlEnd || task.endDate || '';
+
+                    // Normalize empty values
+                    if (!workStart) workStart = task.startDate || startDate;
+                    if (!workEnd) workEnd = task.endDate || endDate;
+
+                    const remainingHours = Math.max((task.estimatedHours || 0) - (task.actualHours || 0), 0);
+                    if (remainingHours <= 0) return;
+
+                    // If the task's work window is entirely before the requested range but task incomplete,
+                    // count the remaining hours as immediate (overdue) workload.
+                    if (workEnd < startDate) {
+                        totalHours += remainingHours;
+                        return;
+                    }
+
+                    // Calculate overlapping portion between work window and requested range
+                    const overlapStart = workStart > startDate ? workStart : startDate;
+                    const overlapEnd = workEnd < endDate ? workEnd : endDate;
+
+                    // If there's no overlap (and work window is after endDate), skip
+                    if (overlapEnd < overlapStart) return;
+
+                    // Distribute remaining hours across the work window days
+                    let taskDays = getWorkingDays(workStart, workEnd);
+                    if (taskDays <= 0) taskDays = 1;
+                    const overlapDays = getWorkingDays(overlapStart, overlapEnd);
+
+                    totalHours += (remainingHours * overlapDays) / taskDays;
+                });
+            });
+
+            return Math.round(totalHours);
+        }
+
+        // ===== MODAL FUNCTIONS =====
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // ===== ENGINEER FUNCTIONS =====
+        function openEngineerModal(id = null) {
+            document.getElementById('engineerModalTitle').textContent = id ? 'Edit Engineer' : 'Add Engineer';
+            document.getElementById('engineerId').value = '';
+            document.getElementById('engineerName').value = '';
+            document.getElementById('engineerType').value = 'electrical';
+            document.getElementById('engineerHours').value = '8';
+            document.getElementById('engineerSkills').value = '';
+
+            if (id) {
+                const d = appData.engineers.find(d => d.id === id);
+                if (d) {
+                    document.getElementById('engineerId').value = d.id;
+                    document.getElementById('engineerName').value = d.name;
+                    document.getElementById('engineerType').value = d.type;
+                    document.getElementById('engineerHours').value = d.hoursPerDay;
+                    document.getElementById('engineerSkills').value = d.skills.join(', ');
+                }
+            }
+
+            openModal('engineerModal');
+        }
+
+        function saveEngineer() {
+            const id = document.getElementById('engineerId').value;
+            const name = document.getElementById('engineerName').value.trim();
+            const type = document.getElementById('engineerType').value;
+            const hoursPerDay = parseInt(document.getElementById('engineerHours').value) || 8;
+            const skills = document.getElementById('engineerSkills').value.split(',').map(s => s.trim()).filter(s => s);
+
+            if (!name) {
+                alert('Please enter a name');
+                return;
+            }
+
+            if (id) {
+                const idx = appData.engineers.findIndex(d => d.id === id);
+                if (idx >= 0) {
+                    appData.engineers[idx] = { ...appData.engineers[idx], name, type, hoursPerDay, skills };
+                }
+            } else {
+                appData.engineers.push({
+                    id: generateId(),
+                    name,
+                    type,
+                    hoursPerDay,
+                    skills,
+                    active: true
+                });
+            }
+
+            saveData();
+            closeModal('engineerModal');
+            renderEngineers();
+        }
+
+        function deleteEngineer(id) {
+            if (!confirm('Are you sure you want to delete this engineer?')) return;
+            appData.engineers = appData.engineers.filter(d => d.id !== id);
+            saveData();
+            renderEngineers();
+        }
+
+        function renderEngineers() {
+            const tbody = document.getElementById('engineersTableBody');
+            const today = new Date().toISOString().split('T')[0];
+            const weekEnd = new Date();
+            weekEnd.setDate(weekEnd.getDate() + 6);  // 7-day span = 5 working days = 40h
+            const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+            tbody.innerHTML = appData.engineers.map(d => {
+                const available = getAvailableHours(d.id, today, weekEndStr);
+                const assigned = getAssignedHours(d.id, today, weekEndStr);
+                const loadPercent = available > 0 ? Math.round((assigned / available) * 100) : 0;
+
+                let loadClass = 'badge-success';
+                if (loadPercent > 100) loadClass = 'badge-danger';
+                else if (loadPercent > 80) loadClass = 'badge-warning';
+
+                const typeClass = d.type === 'electrical' ? 'badge-electrical' :
+                                  d.type === 'mechanical' ? 'badge-mechanical' : 'badge-both';
+
+                return `
+                    <tr>
+                        <td class="font-medium">${d.name}</td>
+                        <td><span class="badge ${typeClass}">${d.type}</span></td>
+                        <td>${d.hoursPerDay}h</td>
+                        <td class="text-sm text-gray">${d.skills.join(', ') || '-'}</td>
+                        <td><span class="badge ${loadClass}">${loadPercent}%</span> <span class="text-xs text-gray">${assigned}h / ${available}h</span></td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="action-btn" onclick="openEngineerModal('${d.id}')">Edit</button>
+                                <button class="action-btn delete" onclick="deleteEngineer('${d.id}')">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ===== PROJECT FUNCTIONS =====
+        let currentProjectTasks = [];
+
+        function openProjectModal(id = null) {
+            document.getElementById('projectModalTitle').textContent = id ? 'Edit Project' : 'Add Project';
+            document.getElementById('projectId').value = '';
+            document.getElementById('projectJobNumber').value = '';
+            document.getElementById('projectName').value = '';
+            document.getElementById('projectType').value = 'electrical';
+            document.getElementById('projectStatus').value = 'active';
+            document.getElementById('projectStartDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('projectTargetDate').value = '';
+            currentProjectTasks = [];
+
+            if (id) {
+                const p = appData.projects.find(p => p.id === id);
+                if (p) {
+                    document.getElementById('projectId').value = p.id;
+                    document.getElementById('projectJobNumber').value = p.jobNumber;
+                    document.getElementById('projectName').value = p.name;
+                    document.getElementById('projectType').value = p.type;
+                    document.getElementById('projectStatus').value = p.status;
+                    document.getElementById('projectStartDate').value = p.startDate;
+                    document.getElementById('projectTargetDate').value = p.targetDate;
+                    currentProjectTasks = JSON.parse(JSON.stringify(p.tasks || []));
+                }
+            }
+
+            renderTaskList();
+            openModal('projectModal');
+        }
+
+        function renderTaskList() {
+            const container = document.getElementById('projectTaskList');
+
+            if (currentProjectTasks.length === 0) {
+                container.innerHTML = '<div class="empty-state text-sm" style="padding:1rem">No tasks yet. Click "Add Task" to create one.</div>';
+                return;
+            }
+
+            container.innerHTML = currentProjectTasks.map((task, idx) => {
+                const typeLabel = ['ES', 'ML', 'BOM'].includes(task.type) ? task.type : 'Other';
+                const typeBadgeClass = task.type === 'ES' ? 'badge-electrical' :
+                                       task.type === 'ML' ? 'badge-mechanical' :
+                                       task.type === 'BOM' ? 'badge-warning' : 'badge-gray';
+                const actualHoursDisplay = task.actualHours !== undefined ? ` (Actual: ${formatHours(task.actualHours)}h)` : '';
+                return `
+                <div class="task-item">
+                    <div class="task-item-info">
+                        <div class="task-item-name">
+                            <span class="badge ${typeBadgeClass}" style="margin-right:0.5rem">${typeLabel}</span>
+                            ${task.name || 'Unnamed Task'}
+                        </div>
+                        <div class="task-item-meta">
+                            ${getEngineerName(task.assignedTo)} | ${formatHours(task.estimatedHours)}h${actualHoursDisplay} | ${formatDate(task.startDate)} - ${formatDate(task.endDate)}
+                        </div>
+                    </div>
+                    <div class="action-btns">
+                        <button class="action-btn" onclick="editTaskInList(${idx})">Edit</button>
+                        <button class="action-btn delete" onclick="removeTaskFromList(${idx})">Remove</button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        // Task type mapping
+        const TASK_TYPE_NAMES = {
+            'ES': 'Electrical Schematics',
+            'ML': 'Mechanical Layout',
+            'BOM': 'Bill of Materials'
+        };
+
+        function onTaskTypeChange() {
+            const typeSelect = document.getElementById('taskType');
+            const customGroup = document.getElementById('customTaskTypeGroup');
+            const taskNameInput = document.getElementById('taskName');
+            const taskNameGroup = document.getElementById('taskNameGroup');
+
+            if (typeSelect.value === 'other') {
+                customGroup.style.display = 'block';
+                taskNameGroup.style.display = 'none';
+                taskNameInput.removeAttribute('readonly');
+            } else {
+                customGroup.style.display = 'none';
+                taskNameGroup.style.display = 'block';
+                taskNameInput.value = TASK_TYPE_NAMES[typeSelect.value] || '';
+                taskNameInput.setAttribute('readonly', true);
+            }
+        }
+
+        function addTaskRow() {
+            const projectStart = document.getElementById('projectStartDate').value || new Date().toISOString().split('T')[0];
+            const endDate = new Date(projectStart);
+            endDate.setDate(endDate.getDate() + 5);
+
+            currentProjectTasks.push({
+                id: generateId(),
+                name: 'Electrical Schematics',
+                type: 'ES',
+                assignedTo: appData.engineers[0]?.id || '',
+                estimatedHours: 8,
+                startDate: projectStart,
+                endDate: endDate.toISOString().split('T')[0],
+                status: 'not-started',
+                deliverable: 'schematic'
+            });
+
+            editTaskInList(currentProjectTasks.length - 1);
+        }
+
+        function editTaskInList(idx) {
+            const task = currentProjectTasks[idx];
+            if (!task) return;
+
+            // Populate task modal
+            document.getElementById('taskProjectId').value = idx;
+            document.getElementById('taskId').value = task.id;
+            document.getElementById('taskEstimatedHours').value = (task.estimatedHours !== undefined && task.estimatedHours !== null) ? task.estimatedHours : 8;
+            document.getElementById('taskActualHours').value = task.actualHours !== undefined ? task.actualHours : '';
+            document.getElementById('taskStartDate').value = task.startDate || '';
+            document.getElementById('taskEndDate').value = task.endDate || '';
+            document.getElementById('taskStatus').value = task.status || 'not-started';
+            document.getElementById('taskDeliverable').value = task.deliverable || 'schematic';
+
+            // Set task type dropdown
+            const taskType = task.type || 'ES';
+            const typeSelect = document.getElementById('taskType');
+            const customGroup = document.getElementById('customTaskTypeGroup');
+            const taskNameInput = document.getElementById('taskName');
+            const taskNameGroup = document.getElementById('taskNameGroup');
+            const customNameInput = document.getElementById('taskCustomName');
+
+            if (['ES', 'ML', 'BOM'].includes(taskType)) {
+                typeSelect.value = taskType;
+                customGroup.style.display = 'none';
+                taskNameGroup.style.display = 'block';
+                taskNameInput.value = TASK_TYPE_NAMES[taskType];
+                taskNameInput.setAttribute('readonly', true);
+                customNameInput.value = '';
+            } else {
+                typeSelect.value = 'other';
+                customGroup.style.display = 'block';
+                taskNameGroup.style.display = 'none';
+                customNameInput.value = task.name || '';
+            }
+
+            // Populate engineer dropdown
+            const select = document.getElementById('taskAssignedTo');
+            select.innerHTML = '<option value="">Unassigned</option>' +
+                appData.engineers.map(d => `<option value="${d.id}" ${d.id === task.assignedTo ? 'selected' : ''}>${d.name}</option>`).join('');
+
+            openModal('taskModal');
+        }
+
+        const formatHours = (hours) => {
+            if (hours === undefined || hours === null || isNaN(hours)) return '0.00';
+            return parseFloat(hours).toFixed(2);
+        };
+
+        function saveTask() {
+            const idx = parseInt(document.getElementById('taskProjectId').value);
+            const typeSelect = document.getElementById('taskType');
+            const taskType = typeSelect.value;
+
+            let taskName;
+            if (taskType === 'other') {
+                taskName = document.getElementById('taskCustomName').value.trim();
+                if (!taskName) {
+                    alert('Please enter a custom task name');
+                    return;
+                }
+            } else {
+                taskName = TASK_TYPE_NAMES[taskType];
+            }
+
+            const actualHoursValue = parseFloat(document.getElementById('taskActualHours').value);
+            const updatedTask = {
+                id: document.getElementById('taskId').value || generateId(),
+                name: taskName,
+                type: taskType === 'other' ? taskName : taskType,
+                assignedTo: document.getElementById('taskAssignedTo').value,
+                estimatedHours: parseFloat(document.getElementById('taskEstimatedHours').value) || 0,
+                startDate: document.getElementById('taskStartDate').value,
+                endDate: document.getElementById('taskEndDate').value,
+                status: document.getElementById('taskStatus').value,
+                deliverable: document.getElementById('taskDeliverable').value
+            };
+
+            // Preserve actualHours if not empty, including zero
+            if (!isNaN(actualHoursValue)) {
+                updatedTask.actualHours = actualHoursValue;
+            } else if (currentProjectTasks[idx] && currentProjectTasks[idx].actualHours !== undefined) {
+                // Preserve existing actualHours if field is empty
+                updatedTask.actualHours = currentProjectTasks[idx].actualHours;
+            }
+
+            currentProjectTasks[idx] = updatedTask;
+
+            closeModal('taskModal');
+            renderTaskList();
+        }
+
+        function removeTaskFromList(idx) {
+            currentProjectTasks.splice(idx, 1);
+            renderTaskList();
+        }
+
+        function saveProject() {
+            const id = document.getElementById('projectId').value;
+            const jobNumber = document.getElementById('projectJobNumber').value.trim();
+            const name = document.getElementById('projectName').value.trim();
+            const type = document.getElementById('projectType').value;
+            const status = document.getElementById('projectStatus').value;
+            const startDate = document.getElementById('projectStartDate').value;
+            const targetDate = document.getElementById('projectTargetDate').value;
+
+            if (!jobNumber || !name) {
+                alert('Please enter job number and project name');
+                return;
+            }
+
+            const projectData = {
+                jobNumber,
+                name,
+                type,
+                status,
+                startDate,
+                targetDate,
+                tasks: currentProjectTasks
+            };
+
+            if (id) {
+                const idx = appData.projects.findIndex(p => p.id === id);
+                if (idx >= 0) {
+                    appData.projects[idx] = { ...appData.projects[idx], ...projectData };
+                }
+            } else {
+                appData.projects.push({
+                    id: generateId(),
+                    ...projectData
+                });
+            }
+
+            saveData();
+            closeModal('projectModal');
+            renderProjects();
+        }
+
+        function deleteProject(id) {
+            if (!confirm('Are you sure you want to delete this project?')) return;
+            appData.projects = appData.projects.filter(p => p.id !== id);
+            saveData();
+            renderProjects();
+        }
+
+        function renderProjects() {
+            const statusFilter = document.getElementById('projectStatusFilter').value;
+            const typeFilter = document.getElementById('projectTypeFilter').value;
+
+            let filtered = appData.projects;
+            if (statusFilter !== 'all') {
+                filtered = filtered.filter(p => p.status === statusFilter);
+            }
+            if (typeFilter !== 'all') {
+                filtered = filtered.filter(p => p.type === typeFilter);
+            }
+
+            const container = document.getElementById('projectsList');
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="card"><div class="empty-state">No projects found. Click "Add Project" to create one.</div></div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(p => {
+                const completedTasks = p.tasks.filter(t => t.status === 'complete').length;
+                const totalTasks = p.tasks.length;
+                const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+                const typeClass = p.type === 'electrical' ? 'badge-electrical' :
+                                  p.type === 'mechanical' ? 'badge-mechanical' : 'badge-both';
+
+                const statusClass = p.status === 'active' ? 'badge-success' :
+                                    p.status === 'on-hold' ? 'badge-warning' : 'badge-gray';
+
+                return `
+                    <div class="card mb-4" style="border-top: 3px solid ${p.category === 'Pipeline' ? '#fbbf24' : '#3b82f6'}">
+                        <div class="card-header" style="background-color:${getCategoryBgColor(p.category)}">
+                            <div>
+                                <span class="card-title">${p.name}</span>
+                                <span class="text-sm text-gray ml-2">${p.jobNumber}</span>
+                            </div>
+                            <div class="action-btns">
+                                <button class="action-btn" onclick="openProjectModal('${p.id}')">Edit</button>
+                                <button class="action-btn delete" onclick="deleteProject('${p.id}')">Delete</button>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 mb-4">
+                            <span class="badge ${typeClass}">${p.type}</span>
+                            <span class="badge ${statusClass}">${p.status}</span>
+                            <span class="text-sm text-gray">${formatDate(p.startDate)} - ${formatDate(p.targetDate)}</span>
+                        </div>
+                        <div class="mb-2 text-sm">
+                            <span class="font-medium">Progress:</span> ${completedTasks}/${totalTasks} tasks (${progress}%)
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${progress === 100 ? 'success' : ''}" style="width: ${progress}%"></div>
+                        </div>
+                        ${p.tasks.length > 0 ? `
+                            <div class="task-list mt-4">
+                                ${p.tasks.map(t => {
+                                    const statusBadge = t.status === 'complete' ? 'badge-success' :
+                                                        t.status === 'in-progress' ? 'badge-warning' : 'badge-gray';
+                                    return `
+                                        <div class="task-item">
+                                            <div class="task-item-info">
+                                                <div class="task-item-name">${t.name}</div>
+                                                <div class="task-item-meta">
+                                                    ${getEngineerName(t.assignedTo)} | ${formatHours(t.estimatedHours)}h | ${formatDate(t.startDate)} - ${formatDate(t.endDate)}
+                                                </div>
+                                            </div>
+                                            <span class="badge ${statusBadge}">${t.status}</span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ===== TIME OFF FUNCTIONS =====
+        let currentCalendarDate = new Date();
+
+        function openTimeOffModal(id = null) {
+            document.getElementById('timeOffModalTitle').textContent = id ? 'Edit Time Off' : 'Add Time Off';
+            document.getElementById('timeOffId').value = '';
+            document.getElementById('timeOffType').value = 'vacation';
+            document.getElementById('timeOffStartDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('timeOffEndDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('timeOffNotes').value = '';
+
+            // Populate engineer dropdown
+            const select = document.getElementById('timeOffEngineer');
+            select.innerHTML = appData.engineers.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+
+            if (id) {
+                const to = appData.timeoff.find(t => t.id === id);
+                if (to) {
+                    document.getElementById('timeOffId').value = to.id;
+                    document.getElementById('timeOffEngineer').value = to.engineerId;
+                    document.getElementById('timeOffType').value = to.type;
+                    document.getElementById('timeOffStartDate').value = to.startDate;
+                    document.getElementById('timeOffEndDate').value = to.endDate;
+                    document.getElementById('timeOffNotes').value = to.notes || '';
+                }
+                document.getElementById('timeOffDeleteBtn').style.display = 'inline-flex';
+            } else {
+                document.getElementById('timeOffDeleteBtn').style.display = 'none';
+            }
+
+            openModal('timeOffModal');
+        }
+
+        function saveTimeOff() {
+            const id = document.getElementById('timeOffId').value;
+            const engineerId = document.getElementById('timeOffEngineer').value;
+            const type = document.getElementById('timeOffType').value;
+            const startDate = document.getElementById('timeOffStartDate').value;
+            const endDate = document.getElementById('timeOffEndDate').value;
+            const notes = document.getElementById('timeOffNotes').value.trim();
+
+            if (!engineerId || !startDate || !endDate) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (endDate < startDate) {
+                alert('End date must be after start date');
+                return;
+            }
+
+            const timeOffData = { engineerId, type, startDate, endDate, notes };
+
+            if (id) {
+                const idx = appData.timeoff.findIndex(t => t.id === id);
+                if (idx >= 0) {
+                    appData.timeoff[idx] = { ...appData.timeoff[idx], ...timeOffData };
+                }
+            } else {
+                appData.timeoff.push({
+                    id: generateId(),
+                    ...timeOffData
+                });
+            }
+
+            saveData();
+            closeModal('timeOffModal');
+            renderTimeOff();
+            // Recalculate reports if currently viewing reports
+            if (currentPage === 'reports') {
+                renderReportContent();
+            }
+        }
+
+        function deleteTimeOff(id) {
+            if (!confirm('Are you sure you want to delete this time off entry?')) return;
+            appData.timeoff = appData.timeoff.filter(t => t.id !== id);
+            saveData();
+            renderTimeOff();
+            // Recalculate reports if currently viewing reports
+            if (currentPage === 'reports') {
+                renderReportContent();
+            }
+        }
+
+        function renderTimeOff() {
+            const container = document.getElementById('timeOffCalendar');
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startPad = firstDay.getDay();
+            const daysInMonth = lastDay.getDate();
+
+            const monthName = currentCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            let html = `
+                <div class="calendar-header">
+                    <button class="btn btn-secondary btn-sm" onclick="calendarPrev()">← Prev</button>
+                    <h3>${monthName}</h3>
+                    <button class="btn btn-secondary btn-sm" onclick="calendarNext()">Next →</button>
+                </div>
+                <div class="calendar-grid">
+                    <div class="calendar-day-header">Sun</div>
+                    <div class="calendar-day-header">Mon</div>
+                    <div class="calendar-day-header">Tue</div>
+                    <div class="calendar-day-header">Wed</div>
+                    <div class="calendar-day-header">Thu</div>
+                    <div class="calendar-day-header">Fri</div>
+                    <div class="calendar-day-header">Sat</div>
+            `;
+
+            const today = new Date().toISOString().split('T')[0];
+
+            // Previous month padding
+            const prevMonth = new Date(year, month, 0);
+            for (let i = startPad - 1; i >= 0; i--) {
+                const day = prevMonth.getDate() - i;
+                html += `<div class="calendar-day other-month"><div class="calendar-day-number">${day}</div></div>`;
+            }
+
+            // Current month days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const isToday = dateStr === today;
+
+                // Find time off entries for this day
+                const dayTimeOff = appData.timeoff.filter(to =>
+                    to.startDate <= dateStr && to.endDate >= dateStr
+                );
+
+                html += `<div class="calendar-day ${isToday ? 'today' : ''}">
+                    <div class="calendar-day-number">${day}</div>
+                    ${dayTimeOff.map(to => `
+                        <div class="calendar-event ${to.type}" onclick="openTimeOffModal('${to.id}')" title="${getEngineerName(to.engineerId)}: ${to.type}${to.notes ? ' - ' + to.notes : ''}">
+                            ${getEngineerName(to.engineerId).split(' ')[0]}
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+
+            // Next month padding
+            const totalCells = startPad + daysInMonth;
+            const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+            for (let i = 1; i <= remaining; i++) {
+                html += `<div class="calendar-day other-month"><div class="calendar-day-number">${i}</div></div>`;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function calendarPrev() {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+            renderTimeOff();
+        }
+
+        function calendarNext() {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+            renderTimeOff();
+        }
+
+        // ===== GANTT CHART =====
+        let ganttStartDate = new Date();
+        const GANTT_DAYS = 28;
+        const CELL_WIDTH = 30;
+
+        function renderGantt() {
+            const wrapper = document.getElementById('ganttWrapper');
+            const filter = document.getElementById('ganttFilter').value;
+            const engineerFilter = document.getElementById('ganttEngineerFilter').value;
+
+            // Update engineer filter dropdown
+            const engineerSelect = document.getElementById('ganttEngineerFilter');
+            const currentValue = engineerSelect.value;
+            engineerSelect.innerHTML = '<option value="all">All Engineers</option>' +
+                appData.engineers.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            engineerSelect.value = currentValue;
+
+            // Filter projects
+            let projects = appData.projects;
+            if (filter === 'active') {
+                projects = projects.filter(p => p.status === 'active');
+            }
+
+            // Build date headers
+            let datesHtml = '';
+            const dates = [];
+            const startDate = new Date(ganttStartDate);
+            startDate.setHours(0, 0, 0, 0);
+
+            for (let i = 0; i < GANTT_DAYS; i++) {
+                const d = new Date(startDate);
+                d.setDate(d.getDate() + i);
+                const dateStr = d.toISOString().split('T')[0];
+                dates.push(dateStr);
+
+                const isWeekendDay = d.getDay() === 0 || d.getDay() === 6;
+                const isToday = dateStr === new Date().toISOString().split('T')[0];
+
+                datesHtml += `
+                    <div class="gantt-date-cell ${isWeekendDay ? 'weekend' : ''} ${isToday ? 'today' : ''}" style="width:${CELL_WIDTH}px">
+                        <div class="gantt-date-day">${d.getDate()}</div>
+                        <div class="gantt-date-weekday">${d.toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                    </div>
+                `;
+            }
+
+            // Build rows
+            let labelsHtml = '<div class="gantt-label-header">Project / Task</div>';
+            let rowsHtml = '';
+
+            projects.forEach(project => {
+                // Project row
+                labelsHtml += `<div class="gantt-label-row project">${project.jobNumber}: ${project.name}</div>`;
+
+                let projectRowCells = '';
+                for (let i = 0; i < GANTT_DAYS; i++) {
+                    const d = new Date(startDate);
+                    d.setDate(d.getDate() + i);
+                    const isWeekendDay = d.getDay() === 0 || d.getDay() === 6;
+                    const isToday = dates[i] === new Date().toISOString().split('T')[0];
+                    projectRowCells += `<div class="gantt-cell ${isWeekendDay ? 'weekend' : ''} ${isToday ? 'today' : ''}" style="width:${CELL_WIDTH}px"></div>`;
+                }
+                rowsHtml += `<div class="gantt-row project">${projectRowCells}</div>`;
+
+                // Task rows
+                project.tasks.forEach(task => {
+                    if (engineerFilter !== 'all' && task.assignedTo !== engineerFilter) return;
+
+                    labelsHtml += `<div class="gantt-label-row task">${task.name}</div>`;
+
+                    let taskRowCells = '';
+                    for (let i = 0; i < GANTT_DAYS; i++) {
+                        const d = new Date(startDate);
+                        d.setDate(d.getDate() + i);
+                        const isWeekendDay = d.getDay() === 0 || d.getDay() === 6;
+                        const isToday = dates[i] === new Date().toISOString().split('T')[0];
+                        taskRowCells += `<div class="gantt-cell ${isWeekendDay ? 'weekend' : ''} ${isToday ? 'today' : ''}" style="width:${CELL_WIDTH}px"></div>`;
+                    }
+
+                    // Calculate bar position
+                    const taskStart = new Date(task.startDate + 'T00:00:00');
+                    const taskEnd = new Date(task.endDate + 'T00:00:00');
+                    const ganttStart = new Date(startDate);
+                    const ganttEnd = new Date(startDate);
+                    ganttEnd.setDate(ganttEnd.getDate() + GANTT_DAYS);
+
+                    let barHtml = '';
+
+                    // Check if task is visible in current range
+                    if (taskEnd >= ganttStart && taskStart <= ganttEnd) {
+                        const visibleStart = taskStart < ganttStart ? ganttStart : taskStart;
+                        const visibleEnd = taskEnd > ganttEnd ? ganttEnd : taskEnd;
+
+                        const startOffset = Math.floor((visibleStart - ganttStart) / (1000 * 60 * 60 * 24));
+                        const duration = Math.ceil((visibleEnd - visibleStart) / (1000 * 60 * 60 * 24)) + 1;
+
+                        const barLeft = startOffset * CELL_WIDTH;
+                        const barWidth = duration * CELL_WIDTH - 4;
+
+                        const typeClass = project.type;
+                        const completeClass = task.status === 'complete' ? 'complete' : '';
+
+                        barHtml = `<div class="gantt-bar ${typeClass} ${completeClass}" style="left:${barLeft}px;width:${barWidth}px" onclick="openTaskEdit('${project.id}', '${task.id}')">${task.name}</div>`;
+                    }
+
+                    // Add time-off overlays for assigned engineer
+                    let timeOffHtml = '';
+                    if (task.assignedTo) {
+                        const timeoffs = getTimeOffForEngineer(task.assignedTo, dates[0], dates[GANTT_DAYS - 1]);
+                        timeoffs.forEach(to => {
+                            const toStart = new Date(to.startDate + 'T00:00:00');
+                            const toEnd = new Date(to.endDate + 'T00:00:00');
+
+                            if (toEnd >= ganttStart && toStart <= ganttEnd) {
+                                const visibleStart = toStart < ganttStart ? ganttStart : toStart;
+                                const visibleEnd = toEnd > ganttEnd ? ganttEnd : toEnd;
+
+                                const startOffset = Math.floor((visibleStart - ganttStart) / (1000 * 60 * 60 * 24));
+                                const duration = Math.ceil((visibleEnd - visibleStart) / (1000 * 60 * 60 * 24)) + 1;
+
+                                const left = startOffset * CELL_WIDTH;
+                                const width = duration * CELL_WIDTH;
+
+                                timeOffHtml += `<div class="gantt-timeoff" style="left:${left}px;width:${width}px" title="${getEngineerName(to.engineerId)}: ${to.type}"></div>`;
+                            }
+                        });
+                    }
+
+                    rowsHtml += `<div class="gantt-row">${taskRowCells}${barHtml}${timeOffHtml}</div>`;
+                });
+            });
+
+            wrapper.innerHTML = `
+                <div class="gantt-labels">
+                    ${labelsHtml}
+                </div>
+                <div class="gantt-timeline">
+                    <div class="gantt-dates">${datesHtml}</div>
+                    <div class="gantt-rows">${rowsHtml}</div>
+                </div>
+            `;
+        }
+
+        function openTaskEdit(projectId, taskId) {
+            const project = appData.projects.find(p => p.id === projectId);
+            if (!project) return;
+
+            const task = project.tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('taskProjectId').value = projectId;
+            document.getElementById('taskId').value = taskId;
+            document.getElementById('taskName').value = task.name;
+            document.getElementById('taskEstimatedHours').value = task.estimatedHours;
+            document.getElementById('taskStartDate').value = task.startDate;
+            document.getElementById('taskEndDate').value = task.endDate;
+            document.getElementById('taskStatus').value = task.status;
+            document.getElementById('taskDeliverable').value = task.deliverable;
+
+            const select = document.getElementById('taskAssignedTo');
+            select.innerHTML = '<option value="">Unassigned</option>' +
+                appData.engineers.map(d => `<option value="${d.id}" ${d.id === task.assignedTo ? 'selected' : ''}>${d.name}</option>`).join('');
+
+            // Override save function for direct edit
+            document.querySelector('#taskModal .btn-primary').onclick = function() {
+                const project = appData.projects.find(p => p.id === document.getElementById('taskProjectId').value);
+                if (!project) return;
+
+                const taskIdx = project.tasks.findIndex(t => t.id === document.getElementById('taskId').value);
+                if (taskIdx < 0) return;
+
+                project.tasks[taskIdx] = {
+                    id: document.getElementById('taskId').value,
+                    name: document.getElementById('taskName').value.trim(),
+                    assignedTo: document.getElementById('taskAssignedTo').value,
+                    // Preserve explicit zero values; use 8 only when field is empty/invalid
+                    estimatedHours: (function(){
+                        const v = parseFloat(document.getElementById('taskEstimatedHours').value);
+                        return isNaN(v) ? 8 : v;
+                    })(),
+                    startDate: document.getElementById('taskStartDate').value,
+                    endDate: document.getElementById('taskEndDate').value,
+                    status: document.getElementById('taskStatus').value,
+                    deliverable: document.getElementById('taskDeliverable').value
+                };
+
+                saveData();
+                closeModal('taskModal');
+                renderGantt();
+
+                // Reset save function
+                document.querySelector('#taskModal .btn-primary').onclick = saveTask;
+            };
+
+            openModal('taskModal');
+        }
+
+        function ganttPrev() {
+            ganttStartDate.setDate(ganttStartDate.getDate() - 7);
+            renderGantt();
+        }
+
+        function ganttNext() {
+            ganttStartDate.setDate(ganttStartDate.getDate() + 7);
+            renderGantt();
+        }
+
+        function ganttToday() {
+            ganttStartDate = new Date();
+            ganttStartDate.setDate(ganttStartDate.getDate() - 3); // Start a few days before today
+            renderGantt();
+        }
+
+        // Helper to get category background color
+        function getCategoryBgColor(category) {
+            if (category === 'Pipeline') return '#fffbeb'; // light yellow
+            if (category === 'Engineering') return '#eff6ff'; // light blue
+            return 'transparent';
+        }
+
+        // ===== DASHBOARD =====
+        function renderDashboard() {
+            // Update current date
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            const weekEnd = new Date();
+            weekEnd.setDate(weekEnd.getDate() + 6);  // 7-day span = 5 working days = 40h
+            const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+            // Summary cards - split by category
+            // Treat 'late' as active for dashboard counts
+            const activePipeline = appData.projects.filter(p => (p.status === 'active' || p.status === 'late') && p.category === 'Pipeline').length;
+            const totalPipeline = appData.projects.filter(p => p.category === 'Pipeline').length;
+            const activeEngineering = appData.projects.filter(p => (p.status === 'active' || p.status === 'late') && p.category === 'Engineering').length;
+            const totalEngineering = appData.projects.filter(p => p.category === 'Engineering').length;
+            const totalEngineers = appData.engineers.length;
+
+            // Calculate average utilization
+            let totalUtil = 0;
+            appData.engineers.forEach(d => {
+                const available = getAvailableHours(d.id, today, weekEndStr);
+                const assigned = getAssignedHours(d.id, today, weekEndStr);
+                if (available > 0) {
+                    totalUtil += (assigned / available) * 100;
+                }
+            });
+            const avgUtil = totalEngineers > 0 ? Math.round(totalUtil / totalEngineers) : 0;
+
+            // Upcoming time off count
+            const upcomingTO = appData.timeoff.filter(to => to.startDate >= today && to.startDate <= weekEndStr).length;
+
+            document.getElementById('summaryCards').innerHTML = `
+                <div class="summary-card" style="background:${getCategoryBgColor('Pipeline')}">
+                    <div class="summary-card-label">Pipeline Projects</div>
+                    <div class="summary-card-value">${activePipeline}</div>
+                    <div class="summary-card-sub">active of ${totalPipeline} total</div>
+                </div>
+                <div class="summary-card" style="background:${getCategoryBgColor('Engineering')}">
+                    <div class="summary-card-label">Engineering Projects</div>
+                    <div class="summary-card-value">${activeEngineering}</div>
+                    <div class="summary-card-sub">active of ${totalEngineering} total</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-label">Engineers</div>
+                    <div class="summary-card-value">${totalEngineers}</div>
+                    <div class="summary-card-sub">available resources</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-label">Avg Utilization</div>
+                    <div class="summary-card-value">${avgUtil}%</div>
+                    <div class="summary-card-sub">this week</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-card-label">Upcoming Time Off</div>
+                    <div class="summary-card-value">${upcomingTO}</div>
+                    <div class="summary-card-sub">next 7 days</div>
+                </div>
+            `;
+
+            // Alerts
+            let alertsHtml = '';
+            appData.engineers.forEach(d => {
+                const available = getAvailableHours(d.id, today, weekEndStr);
+                const assigned = getAssignedHours(d.id, today, weekEndStr);
+                const util = available > 0 ? (assigned / available) * 100 : 0;
+
+                if (util > 100) {
+                    alertsHtml += `
+                        <div class="alert alert-danger">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <span><strong>${d.name}</strong> is overloaded at ${Math.round(util)}% capacity (${assigned}h assigned / ${available}h available)</span>
+                        </div>
+                    `;
+                } else if (util > 90) {
+                    alertsHtml += `
+                        <div class="alert alert-warning">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <span><strong>${d.name}</strong> is at ${Math.round(util)}% capacity</span>
+                        </div>
+                    `;
+                }
+            });
+            document.getElementById('dashboardAlerts').innerHTML = alertsHtml;
+
+            // Weekly workload chart
+            let workloadHtml = '';
+            appData.engineers.forEach(d => {
+                const available = getAvailableHours(d.id, today, weekEndStr);
+                const assigned = getAssignedHours(d.id, today, weekEndStr);
+                const percent = available > 0 ? Math.min(100, (assigned / available) * 100) : 0;
+
+                let barClass = 'normal';
+                if (percent > 100) barClass = 'danger';
+                else if (percent > 80) barClass = 'warning';
+
+                workloadHtml += `
+                    <div class="workload-bar-container">
+                        <div class="workload-bar-label">
+                            <span>${d.name}</span>
+                            <span>${assigned}h / ${available}h</span>
+                        </div>
+                        <div class="workload-bar-wrapper">
+                            <div class="workload-bar ${barClass}" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('weeklyWorkloadChart').innerHTML = workloadHtml || '<div class="text-sm text-gray">No engineers added yet</div>';
+
+            // Upcoming time off
+            const upcoming = appData.timeoff
+                .filter(to => to.startDate >= today)
+                .sort((a, b) => a.startDate.localeCompare(b.startDate))
+                .slice(0, 5);
+
+            if (upcoming.length === 0) {
+                document.getElementById('upcomingTimeOff').innerHTML = '<div class="text-sm text-gray">No upcoming time off</div>';
+            } else {
+                document.getElementById('upcomingTimeOff').innerHTML = `
+                    <table>
+                        <tbody>
+                            ${upcoming.map(to => `
+                                <tr>
+                                    <td class="font-medium">${getEngineerName(to.engineerId)}</td>
+                                    <td><span class="badge badge-${to.type === 'vacation' ? 'success' : to.type === 'sick' ? 'danger' : 'warning'}">${to.type}</span></td>
+                                    <td class="text-sm">${formatDate(to.startDate)}${to.startDate !== to.endDate ? ' - ' + formatDate(to.endDate) : ''}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+        }
+
+        // ===== REPORTS =====
+        let currentReport = 'workload';
+
+        function renderReports() {
+            // Set up tab listeners
+            document.querySelectorAll('.tabs .tab').forEach(tab => {
+                tab.onclick = function() {
+                    document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    currentReport = this.dataset.report;
+                    renderReportContent();
+                };
+            });
+
+            renderReportContent();
+        }
+
+        function renderReportContent() {
+            const container = document.getElementById('reportContent');
+
+            switch (currentReport) {
+                case 'workload':
+                    renderWorkloadReport(container);
+                    break;
+                case 'capacity':
+                    renderCapacityReport(container);
+                    break;
+                case 'projects':
+                    renderProjectStatusReport(container);
+                    break;
+                case 'etohealth':
+                    renderETOHealthReport(container);
+                    break;
+            }
+        }
+
+        function renderWorkloadReport(container) {
+            const today = new Date().toISOString().split('T')[0];
+            const sundayStart = getSundayOfWeek(today);
+            const weeks = [];
+
+            for (let w = 0; w < 4; w++) {
+                const weekStart = new Date(sundayStart + 'T00:00:00');
+                weekStart.setDate(weekStart.getDate() + (w * 7));
+                const weekStartStr = weekStart.toISOString().split('T')[0];
+                
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                const weekEndStr = weekEnd.toISOString().split('T')[0];
+                
+                const weekNum = getWeekNumber(weekStartStr);
+
+                weeks.push({
+                    label: `Week ${weekNum} (${formatDate(weekStartStr)})`,
+                    start: weekStartStr,
+                    end: weekEndStr
+                });
+            }
+
+            let html = `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Weekly Workload by Engineer</span>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Engineer</th>
+                                    ${weeks.map(w => `<th class="text-center">${w.label}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${appData.engineers.map(d => `
+                                    <tr>
+                                        <td class="font-medium">${d.name}</td>
+                                        ${weeks.map(w => {
+                                            const available = getAvailableHours(d.id, w.start, w.end);
+                                            const assigned = getAssignedHours(d.id, w.start, w.end);
+                                            const percent = available > 0 ? Math.round((assigned / available) * 100) : 0;
+
+                                            let badgeClass = 'badge-success';
+                                            if (percent > 100) badgeClass = 'badge-danger';
+                                            else if (percent > 80) badgeClass = 'badge-warning';
+
+                                            return `
+                                                <td class="text-center">
+                                                    <span class="badge ${badgeClass}">${percent}%</span>
+                                                    <div class="text-xs text-gray">${assigned}h / ${available}h</div>
+                                                </td>
+                                            `;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function renderCapacityReport(container) {
+            const today = new Date().toISOString().split('T')[0];
+            const sundayStart = getSundayOfWeek(today);
+            const weeks = [];
+
+            for (let w = 0; w < 8; w++) {
+                const weekStart = new Date(sundayStart + 'T00:00:00');
+                weekStart.setDate(weekStart.getDate() + (w * 7));
+                const weekStartStr = weekStart.toISOString().split('T')[0];
+                
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                const weekEndStr = weekEnd.toISOString().split('T')[0];
+                
+                const weekNum = getWeekNumber(weekStartStr);
+
+                weeks.push({
+                    label: `Week ${weekNum} (${formatDate(weekStartStr)})`,
+                    start: weekStartStr,
+                    end: weekEndStr
+                });
+            }
+
+            let html = `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">8-Week Capacity Forecast</span>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Engineer</th>
+                                    ${weeks.map(w => `<th class="text-center" style="padding:0.5rem">${w.label}</th>`).join('')}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${appData.engineers.map(d => `
+                                    <tr>
+                                        <td class="font-medium">${d.name}</td>
+                                        ${weeks.map(w => {
+                                            const available = getAvailableHours(d.id, w.start, w.end);
+                                            const assigned = getAssignedHours(d.id, w.start, w.end);
+                                            const freeHours = Math.max(0, available - assigned);
+                                            const percent = available > 0 ? Math.round((assigned / available) * 100) : 0;
+
+                                            let bg = '#dcfce7'; // green
+                                            if (percent > 100) bg = '#fee2e2'; // red
+                                            else if (percent > 80) bg = '#fef9c3'; // yellow
+                                            else if (percent > 50) bg = '#dbeafe'; // blue
+
+                                            return `
+                                                <td class="text-center text-xs" style="background:${bg};padding:0.5rem" title="${freeHours}h available">
+                                                    ${freeHours}h
+                                                </td>
+                                            `;
+                                        }).join('')}
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 text-sm">
+                        <strong>Legend:</strong>
+                        <span style="display:inline-block;width:12px;height:12px;background:#dcfce7;margin-left:1rem"></span> Under 50%
+                        <span style="display:inline-block;width:12px;height:12px;background:#dbeafe;margin-left:0.5rem"></span> 50-80%
+                        <span style="display:inline-block;width:12px;height:12px;background:#fef9c3;margin-left:0.5rem"></span> 80-100%
+                        <span style="display:inline-block;width:12px;height:12px;background:#fee2e2;margin-left:0.5rem"></span> Over 100%
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function renderProjectStatusReport(container) {
+            const today = new Date().toISOString().split('T')[0];
+
+            const stats = {
+                active: appData.projects.filter(p => p.status === 'active' || p.status === 'late').length,
+                onHold: appData.projects.filter(p => p.status === 'on-hold').length,
+                complete: appData.projects.filter(p => p.status === 'complete').length
+            };
+
+            // Treat 'late' projects as active for health/workload reports
+            const activeProjects = appData.projects.filter(p => p.status === 'active' || p.status === 'late');
+
+            let html = `
+                <div class="summary-cards mb-4">
+                    <div class="summary-card">
+                        <div class="summary-card-label">Active</div>
+                        <div class="summary-card-value">${stats.active}</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">On Hold</div>
+                        <div class="summary-card-value">${stats.onHold}</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-card-label">Complete</div>
+                        <div class="summary-card-value">${stats.complete}</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Active Projects Status</span>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Type</th>
+                                    <th>Target Date</th>
+                                    <th>Progress</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${activeProjects.map(p => {
+                                    const completedTasks = p.tasks.filter(t => t.status === 'complete').length;
+                                    const totalTasks = p.tasks.length;
+                                    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+                                    const isOverdue = p.targetDate < today;
+                                    const daysRemaining = daysBetween(today, p.targetDate);
+
+                                    let statusBadge = 'badge-success';
+                                    let statusText = 'On Track';
+                                    if (isOverdue) {
+                                        statusBadge = 'badge-danger';
+                                        statusText = 'Overdue';
+                                    } else if (daysRemaining <= 7 && progress < 80) {
+                                        statusBadge = 'badge-warning';
+                                        statusText = 'At Risk';
+                                    }
+
+                                    const typeClass = p.type === 'electrical' ? 'badge-electrical' :
+                                                      p.type === 'mechanical' ? 'badge-mechanical' : 'badge-both';
+
+                                    return `
+                                        <tr style="background-color:${getCategoryBgColor(p.category)}">
+                                            <td>
+                                                <div class="font-medium">${p.name}</div>
+                                                <div class="text-xs text-gray">${p.jobNumber}</div>
+                                            </td>
+                                            <td><span class="badge ${typeClass}">${p.type}</span></td>
+                                            <td>${formatDateFull(p.targetDate)}</td>
+                                            <td>
+                                                <div class="progress-bar" style="width:100px">
+                                                    <div class="progress-fill" style="width:${progress}%"></div>
+                                                </div>
+                                                <div class="text-xs text-gray mt-1">${completedTasks}/${totalTasks} tasks</div>
+                                            </td>
+                                            <td><span class="badge ${statusBadge}">${statusText}</span></td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // ===== MONDAY.COM IMPORT =====
+        function importMondayData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    // Read with cellFormula to get text values, not dates
+                    const workbook = XLSX.read(data, { 
+                        type: 'array', 
+                        cellDates: false,
+                        cellFormula: false
+                    });
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    
+                    // Helper: Get cell value as string, preventing date conversion
+                    const getCellValue = (cellRef) => {
+                        if (!sheet[cellRef]) return '';
+                        const cell = sheet[cellRef];
+                        
+                        // String types - always safe
+                        if (cell.t === 's') return (cell.v || '').toString();
+                        
+                        // Numbers - convert to string 
+                        if (cell.t === 'n') return String(cell.v);
+                        
+                        // Dates - CRITICAL: Check if this looks like it should be text
+                        if (cell.t === 'd') {
+                            // If there's formatted text, check if it looks like a project code
+                            const formatted = (cell.w || String(cell.v)).trim();
+                            
+                            // If formatted value starts with P or S, it's probably a project code, not a date
+                            if (formatted.match(/^[PS]/)) {
+                                console.warn(`Recovering text from date cell ${cellRef}: "${formatted}" (was ${cell.v})`);
+                                return formatted;
+                            }
+                            
+                            // Check if the raw value looks wrong (date serial, not text)
+                            if (typeof cell.v === 'number' && cell.v > 40000 && cell.v < 50000) {
+                                // This is an Excel date serial - check cell formula or hyperlink text
+                                if (cell.h) return cell.h; // hyperlink text
+                                console.warn(`Date serial detected in ${cellRef}: ${cell.v} formatted as ${formatted}`);
+                                return '';  // Can't recover the original text
+                            }
+                            
+                            // Normal date handling
+                            return formatted;
+                        }
+                        
+                        // For any other type, use value or formatted
+                        return (cell.v || cell.w || '').toString();
+                    };
+                    
+                    // Get range info
+                    const range = sheet['!ref'];
+                    if (!range) {
+                        alert('No data found in Excel file');
+                        return;
+                    }
+                    
+                    const decoded = XLSX.utils.decode_range(range);
+                    const allRows = [];
+                    
+                    // Read all rows as arrays of cell values
+                    for (let row = decoded.s.r; row <= decoded.e.r; row++) {
+                        const rowData = [];
+                        for (let col = decoded.s.c; col <= decoded.e.c; col++) {
+                            const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+                            rowData.push(String(getCellValue(cellRef)).trim());
+                        }
+                        allRows.push(rowData);
+                    }
+                    
+                    if (allRows.length === 0) {
+                        alert('No data found in Excel file');
+                        return;
+                    }
+
+                    // Find header row and category sections
+                    let headerRowIdx = -1;
+                    const categories = { Pipeline: [], Engineering: [] };
+                    let currentCategory = 'Pipeline';
+
+                    // First pass: identify header row and categorize rows
+                    for (let i = 0; i < allRows.length; i++) {
+                        const row = allRows[i];
+                        if (!row || row.length === 0) continue;
+                        
+                        const firstCol = String(row[0] || '').trim();
+                        
+                        // Detect category markers
+                        if (firstCol === 'Pipeline' || firstCol === 'Engineering') {
+                            currentCategory = firstCol;
+                            continue;
+                        }
+                        
+                        // Detect header row (contains "Name", "SN", etc.)
+                        if (firstCol === 'Name' && headerRowIdx === -1) {
+                            headerRowIdx = i;
+                            continue;
+                        }
+                        
+                        // Collect data rows (skip rows that start with date-like patterns)
+                        if (headerRowIdx >= 0 && firstCol && !firstCol.match(/^\d{4}-\d{2}-\d{2}/) && firstCol !== 'Pipeline' && firstCol !== 'Engineering') {
+                            categories[currentCategory].push({ row: row, headerIdx: headerRowIdx });
+                        }
+                    }
+
+                    // Get header names
+                    const headers = allRows[headerRowIdx] || [];
+                    
+                    // Track import stats
+                    let projectsImported = 0;
+                    let engineersCreated = 0;
+                    const newEngineers = new Set();
+
+                    // Convert array rows to objects using headers
+                    const arrayToObj = (arr, hdrs) => {
+                        const obj = {};
+                        hdrs.forEach((h, i) => {
+                            if (h && i < arr.length) obj[h] = arr[i];
+                        });
+                        return obj;
+                    };
+
+                    // Process all categories
+                    let dateSerialWarningShown = false;
+                    ['Pipeline', 'Engineering'].forEach(cat => {
+                        categories[cat].forEach(item => {
+                            const row = arrayToObj(item.row, headers);
+                            let name = String(row['Name'] || '').trim();
+                            let sn = String(row['SN'] || '').trim();
+                            
+                            // CRITICAL: Detect if Name column was formatted as Date in Excel
+                            // Date serials show as 5-digit numbers like 45974 instead of Pxxxx
+                            if (name && /^\d{5}$/.test(name)) {
+                                const asNum = parseInt(name);
+                                if (asNum >= 40000 && asNum <= 50000) {
+                                    console.error(`CRITICAL: Date serial detected in Name column: ${name}`);
+                                    if (!dateSerialWarningShown) {
+                                        alert('CRITICAL ERROR:\n\nYour Excel file has the Name column formatted as "Date".\nThis is converting project codes (Pxxxx) to date numbers (45974).\n\nPlease FIX in Excel:\n1. Select the Name column\n2. Format as "Text" instead of "Date"\n3. Re-save and re-import\n\nOtherwise, project codes will be corrupted.');
+                                        dateSerialWarningShown = true;
+                                    }
+                                    return;  // Skip this row - it's corrupted
+                                }
+                            }
+                            
+                            // Handle case where Excel columns might be misaligned - if name is a date but SN isn't  
+                            if (name && name.match(/^\d{4}-\d{2}-\d{2}/) && sn && !sn.match(/^\d{4}-\d{2}-\d{2}/)) {
+                                console.warn(`Column swap detected: swapping name and SN`);
+                                [name, sn] = [sn, name];
+                            }
+                            
+                            if (!name && !sn) return;  // Skip rows with no name and no SN
+
+                            // If user already added prefixes in Excel, use them as-is
+                            // Otherwise, add the prefixes
+                            if (!name.startsWith('P')) {
+                                name = 'P' + name;
+                            }
+                            
+                            if (!sn.startsWith('S')) {
+                                sn = sn ? 'S' + sn : name;  // Use name as fallback if no SN
+                            }
+                            
+                            if (!sn) return;  // Stop if still no valid SN
+
+                        // Get or create primary engineer
+                        let primaryEngineerName = (row['ETO Primary Engineer'] || '').toString().trim();
+                        
+                        let primaryEngineerId = '';
+                        // Skip if empty, whitespace only, or placeholder
+                        const isValidEngineerName = primaryEngineerName && 
+                                                    primaryEngineerName.length > 0 &&
+                                                    primaryEngineerName.toLowerCase() !== 'primary engineer' && 
+                                                    primaryEngineerName.toLowerCase() !== 'none' &&
+                                                    primaryEngineerName !== '-' && 
+                                                    primaryEngineerName !== '';
+                        
+                        if (isValidEngineerName) {
+                            let engineer = appData.engineers.find(e =>
+                                e.name.toLowerCase() === primaryEngineerName.toLowerCase()
+                            );
+                            if (!engineer) {
+                                // Check if we already created this engineer in this import session
+                                if (!newEngineers.has(primaryEngineerName)) {
+                                    engineer = {
+                                        id: generateId(),
+                                        name: primaryEngineerName,
+                                        type: 'both',
+                                        hoursPerDay: 8,
+                                        skills: [],
+                                        active: true
+                                    };
+                                    appData.engineers.push(engineer);
+                                    newEngineers.add(primaryEngineerName);
+                                    engineersCreated++;
+                                } else {
+                                    engineer = appData.engineers.find(e => e.name.toLowerCase() === primaryEngineerName.toLowerCase());
+                                }
+                            }
+                            if (engineer) primaryEngineerId = engineer.id;
+                        }
+                        
+                        // Always ensure a valid engineer assignment
+                        if (!primaryEngineerId && appData.engineers.length > 0) {
+                            // Find first active engineer
+                            const activeEng = appData.engineers.find(e => e.active !== false);
+                            if (activeEng) primaryEngineerId = activeEng.id;
+                            if (!primaryEngineerId) primaryEngineerId = appData.engineers[0].id;
+                        }
+
+                        // Parse dates (Excel dates may be numbers or strings)
+                        const parseExcelDate = (val) => {
+                            if (!val && val !== 0) return '';
+
+                            // If value is numeric or a numeric string, treat as Excel serial
+                            if (typeof val === 'number' || (typeof val === 'string' && /^\d+$/.test(val.trim()))) {
+                                const num = typeof val === 'number' ? val : parseInt(val.trim(), 10);
+                                // Excel serials are around 40000+ for modern dates
+                                if (!isNaN(num) && num > 20000) {
+                                    const date = new Date((num - 25569) * 86400 * 1000);
+                                    if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
+                                }
+                            }
+
+                            // If already ISO-like (YYYY-MM-DD) or with hyphens, normalize
+                            if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val.trim())) {
+                                return val.trim().split('T')[0];
+                            }
+
+                            // Handle common slash formats like MM/DD/YYYY or M/D/YY
+                            if (typeof val === 'string' && val.includes('/')) {
+                                const parts = val.split('/').map(p => p.trim());
+                                if (parts.length === 3) {
+                                    const [m, d, y] = parts;
+                                    const year = y.length === 2 ? '20' + y : y;
+                                    return `${year}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                                }
+                            }
+
+                            // Fallback: return trimmed string (may already be readable)
+                            return (typeof val === 'string') ? val.trim() : '';
+                        };
+
+                        // Build tasks array
+                        const tasks = [];
+                        const today = new Date().toISOString().split('T')[0];
+
+                        // ES Task (Electrical Schematics)
+                        // Accept several possible header names for estimated/actual columns
+                        const esEstimatedVal = row['Estimated Electrical'] || row['Estimated ES Hours'] || row['Estimated ES'] || row['Estimated'];
+                        const esEstimated = esEstimatedVal ? parseFloat(esEstimatedVal) || 0 : 0;
+                        const esActualVal = row['Actual ES Hours'] || row['Actual Estimated ES Hours'] || row['Actual ES'];
+                        const esActual = esActualVal ? parseFloat(esActualVal) || 0 : 0;
+                        const esStarted = parseExcelDate(row['ES Started']);
+                        const esFinished = parseExcelDate(row['ES Finished']);
+
+                        if (esEstimated > 0 || esActual > 0 || esStarted || esFinished) {
+                            let esStatus = 'not-started';
+                            if (esFinished || row['ES Done'] === 'Yes' || row['ES Done'] === true) {
+                                esStatus = 'complete';
+                            } else if (esStarted) {
+                                esStatus = 'in-progress';
+                            }
+
+                            tasks.push({
+                                id: generateId(),
+                                name: 'Electrical Schematics',
+                                type: 'ES',
+                                assignedTo: primaryEngineerId,
+                                estimatedHours: esEstimated,
+                                actualHours: esActual,
+                                // Keep both the task timeline (used for display) and the actual ES-specific dates
+                                startDate: esStarted || parseExcelDate(row['Eng. Timeline - Start']) || today,
+                                endDate: esFinished || parseExcelDate(row['Eng. Timeline - End']) || '',
+                                esStart: esStarted || '',
+                                esEnd: esFinished || '',
+                                status: esStatus,
+                                deliverable: 'schematic'
+                            });
+                        }
+
+                        // ML Task (Mechanical Layout)
+                        // Accept several possible header names for estimated/actual columns
+                        const mlEstimatedVal = row['Estimated Mechanical'] || row['Estimated ML Hours'] || row['Estimated ML'] || row['Estimated'];
+                        const mlEstimated = mlEstimatedVal ? parseFloat(mlEstimatedVal) || 0 : 0;
+                        const mlActualVal = row['Actual ML Hours'] || row['Actual MS Hours'] || row['Actual ML'] || row['Actual'];
+                        const mlActual = mlActualVal ? parseFloat(mlActualVal) || 0 : 0;
+                        const mlStarted = parseExcelDate(row['ML Started']);
+                        const mlFinished = parseExcelDate(row['ML Finished']);
+
+                        if (mlEstimated > 0 || mlActual > 0 || mlStarted || mlFinished) {
+                            let mlStatus = 'not-started';
+                            if (mlFinished) {
+                                mlStatus = 'complete';
+                            } else if (mlStarted) {
+                                mlStatus = 'in-progress';
+                            }
+
+                            tasks.push({
+                                id: generateId(),
+                                name: 'Mechanical Layout',
+                                type: 'ML',
+                                assignedTo: primaryEngineerId,
+                                estimatedHours: mlEstimated,
+                                actualHours: mlActual,
+                                startDate: mlStarted || parseExcelDate(row['Eng. Timeline - Start']) || today,
+                                endDate: mlFinished || parseExcelDate(row['Eng. Timeline - End']) || '',
+                                mlStart: mlStarted || '',
+                                mlEnd: mlFinished || '',
+                                status: mlStatus,
+                                deliverable: '3d-model'
+                            });
+                        }
+
+                        // Map Engineering Status
+                        let projectStatus = 'active';
+                        const engStatus = (row['Engineering Status'] || '').toLowerCase();
+                        if (engStatus.includes('complete') || engStatus.includes('done')) {
+                            projectStatus = 'complete';
+                        } else if (engStatus.includes('hold')) {
+                            projectStatus = 'on-hold';
+                        }
+
+                        // Determine project type
+                        let projectType = 'combined';
+                        if (tasks.length === 1) {
+                            projectType = tasks[0].type === 'ES' ? 'electrical' : 'mechanical';
+                        }
+
+                        // Check if project already exists (by SN and category)
+                        const existingIdx = appData.projects.findIndex(p => p.jobNumber === sn && p.category === cat);
+
+                        const project = {
+                            id: existingIdx >= 0 ? appData.projects[existingIdx].id : generateId(),
+                            jobNumber: sn,
+                            name: row['Project Assigned'] || name || sn,
+                            system: row['System'] || '',
+                            client: row['Client'] || '',
+                            productGroup: row['Product Group'] || '',
+                            priority: row['Priority'] || 'Medium',
+                            primaryEngineer: primaryEngineerId,
+                            type: projectType,
+                            category: cat,
+                            startDate: parseExcelDate(row['Eng. Timeline - Start']) || today,
+                            targetDate: parseExcelDate(row['Eng. Timeline - End']) || parseExcelDate(row['Promised date']) || '',
+                            promisedDate: parseExcelDate(row['Promised date']) || '',
+                            entryDate: parseExcelDate(row['Entry Date']) || today,
+                            status: projectStatus,
+                            engineeringStatus: row['Engineering Status'] || '',
+                            lastUpdated: today,
+                            tasks: tasks
+                        };
+
+                        if (existingIdx >= 0) {
+                            appData.projects[existingIdx] = project;
+                        } else {
+                            appData.projects.push(project);
+                        }
+                        projectsImported++;
+                        });
+                    });
+
+                    saveData();
+                    renderAll();
+
+                    // Show sample of imported data
+                    const sampleProject = appData.projects.slice(-1)[0];
+                    let sampleMsg = sampleProject ? `\nSample: ${sampleProject.jobNumber} - ${sampleProject.name}` : '';
+                    alert(`Import Complete!\n\nProjects: ${projectsImported}\nEngineers: ${engineersCreated}${sampleMsg}\n\nCheck F12 console for debug info`);
+
+                } catch (err) {
+                    console.error(err);
+                    alert('Error reading Excel file: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
+        // ===== ETO DATA HEALTH REPORT =====
+        function renderETOHealthReport(container) {
+            const today = new Date().toISOString().split('T')[0];
+            const weekEnd = new Date();
+            weekEnd.setDate(weekEnd.getDate() + 6);  // 7-day span = 5 working days = 40h
+            const weekEndStr = weekEnd.toISOString().split('T')[0];
+
+            // Get active projects only
+            const activeProjects = appData.projects.filter(p => p.status === 'active');
+            const totalActive = activeProjects.length;
+
+            // Calculate data completion metrics
+            let hasEstimatedHours = 0;
+            let hasTimelineDates = 0;
+            let hasRecentStatus = 0;
+
+            const projectsOnTarget = [];
+            const projectsOverHours = [];
+            const projectsWithGaps = [];
+
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+            activeProjects.forEach(p => {
+                // Calculate totals
+                let totalEstimated = 0;
+                let totalActual = 0;
+                const gaps = [];
+
+                p.tasks.forEach(t => {
+                    totalEstimated += t.estimatedHours || 0;
+                    totalActual += t.actualHours || 0;
+                });
+
+                // Check estimated hours
+                if (totalEstimated > 0) {
+                    hasEstimatedHours++;
+                } else {
+                    gaps.push('Missing estimated hours');
+                }
+
+                // Check timeline dates
+                if (p.startDate && p.targetDate) {
+                    hasTimelineDates++;
+                } else {
+                    gaps.push('Missing timeline dates');
+                }
+
+                // Check recent status update
+                if (p.lastUpdated && p.lastUpdated >= sevenDaysAgoStr) {
+                    hasRecentStatus++;
+                } else if (p.lastUpdated) {
+                    const daysSince = Math.ceil((new Date(today) - new Date(p.lastUpdated)) / (1000 * 60 * 60 * 24));
+                    gaps.push(`Status not updated in ${daysSince} days`);
+                } else {
+                    gaps.push('No status update recorded');
+                }
+
+                // Categorize project
+                if (gaps.length > 0) {
+                    projectsWithGaps.push({ project: p, gaps, totalEstimated, totalActual });
+                }
+
+                if (totalEstimated > 0) {
+                    if (totalActual > totalEstimated) {
+                        const overBy = totalActual - totalEstimated;
+                        const overPercent = Math.round((overBy / totalEstimated) * 100);
+                        projectsOverHours.push({ project: p, totalEstimated, totalActual, overBy, overPercent });
+                    } else {
+                        const remaining = totalEstimated - totalActual;
+                        projectsOnTarget.push({ project: p, totalEstimated, totalActual, remaining });
+                    }
+                }
+            });
+
+            // Calculate percentages
+            const estHoursPercent = totalActive > 0 ? Math.round((hasEstimatedHours / totalActive) * 100) : 0;
+            const datesPercent = totalActive > 0 ? Math.round((hasTimelineDates / totalActive) * 100) : 0;
+            const statusPercent = totalActive > 0 ? Math.round((hasRecentStatus / totalActive) * 100) : 0;
+
+            // Build progress bar
+            const progressBar = (percent, target = 100) => {
+                const barClass = percent >= target ? 'success' : percent >= 80 ? 'warning' : 'danger';
+                return `
+                    <div class="progress-bar" style="width:150px;display:inline-block;vertical-align:middle;margin:0 0.5rem">
+                        <div class="progress-fill ${barClass === 'success' ? 'success' : ''}" style="width:${Math.min(percent, 100)}%;background:${barClass === 'danger' ? 'var(--danger)' : barClass === 'warning' ? 'var(--warning)' : 'var(--success)'}"></div>
+                    </div>
+                    <span class="badge badge-${barClass}">${percent}%</span>
+                `;
+            };
+
+            const weekEndDate = new Date();
+            weekEndDate.setDate(weekEndDate.getDate() + (7 - weekEndDate.getDay()));
+
+            let html = `
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <span class="card-title">ETO Monday.com Data Health Report</span>
+                        <span class="text-sm text-gray">Week Ending: ${formatDateFull(weekEndDate.toISOString().split('T')[0])}</span>
+                    </div>
+                    <div style="padding:1rem;background:var(--gray-50);border-bottom:1px solid var(--gray-200)">
+                        <div class="text-lg font-semibold">Total Active Projects: ${totalActive}</div>
+                    </div>
+                    <div style="padding:1rem">
+                        <h4 style="margin-bottom:1rem">Data Completion</h4>
+                        <table style="width:100%">
+                            <tr>
+                                <td style="padding:0.5rem 0">Estimated Hours Entered:</td>
+                                <td>${progressBar(estHoursPercent)}</td>
+                                <td class="text-sm text-gray">(Target: 100%)</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0.5rem 0">Timeline Dates Entered:</td>
+                                <td>${progressBar(datesPercent)}</td>
+                                <td class="text-sm text-gray">(Target: 100%)</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:0.5rem 0">Status Updated (last 7 days):</td>
+                                <td>${progressBar(statusPercent)}</td>
+                                <td class="text-sm text-gray">(Target: 100%)</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <span class="card-title">Projects On Target (${projectsOnTarget.length})</span>
+                        <span class="badge badge-success">Good</span>
+                    </div>
+                    ${projectsOnTarget.length > 0 ? `
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>SN</th>
+                                        <th>Name</th>
+                                        <th class="text-right">Est. Hrs</th>
+                                        <th class="text-right">Actual Hrs</th>
+                                        <th class="text-right">Remaining</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${projectsOnTarget.map(p => `
+                                        <tr style="background-color:${getCategoryBgColor(p.project.category)}">
+                                            <td class="font-medium">${p.project.jobNumber}</td>
+                                            <td>${p.project.name}</td>
+                                            <td class="text-right">${formatHours(p.totalEstimated)}h</td>
+                                            <td class="text-right">${formatHours(p.totalActual)}h</td>
+                                            <td class="text-right">${formatHours(p.remaining)}h</td>
+                                            <td><span class="badge badge-success">${p.project.engineeringStatus || 'Active'}</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : '<div class="text-sm text-gray" style="padding:1rem">No projects with estimated hours on target</div>'}
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <span class="card-title">Projects Over Hours (${projectsOverHours.length})</span>
+                        <span class="badge badge-warning">Attention</span>
+                    </div>
+                    ${projectsOverHours.length > 0 ? `
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>SN</th>
+                                        <th>Name</th>
+                                        <th class="text-right">Est. Hrs</th>
+                                        <th class="text-right">Actual Hrs</th>
+                                        <th class="text-right">Over By</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${projectsOverHours.map(p => `
+                                        <tr style="background-color:${getCategoryBgColor(p.project.category)}">
+                                            <td class="font-medium">${p.project.jobNumber}</td>
+                                            <td>${p.project.name}</td>
+                                            <td class="text-right">${formatHours(p.totalEstimated)}h</td>
+                                            <td class="text-right">${formatHours(p.totalActual)}h</td>
+                                            <td class="text-right"><span class="badge badge-danger">+${formatHours(p.overBy)}h (${p.overPercent}%)</span></td>
+                                            <td><span class="badge badge-warning">${p.project.engineeringStatus || 'Active'}</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    ` : '<div class="text-sm text-gray" style="padding:1rem">No projects over hours</div>'}
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <span class="card-title">Projects With Critical Gaps (${projectsWithGaps.length})</span>
+                        <span class="badge badge-danger">Action Needed</span>
+                    </div>
+                    ${projectsWithGaps.length > 0 ? `
+                        <div style="padding:1rem">
+                            ${projectsWithGaps.map(p => `
+                                <div style="padding:0.5rem;margin:0.5rem 0;border-bottom:1px solid var(--gray-100);background-color:${getCategoryBgColor(p.project.category)}">
+                                    <span class="font-medium">${p.project.jobNumber}</span>:
+                                    <span class="text-gray">${p.gaps.join(', ')}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : '<div class="text-sm text-gray" style="padding:1rem">All projects have complete data</div>'}
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Notes/Issues</span>
+                    </div>
+                    <div style="padding:1rem" class="text-sm text-gray">
+                        <div>• Total engineers in system: ${appData.engineers.length}</div>
+                        <div>• Total projects in system: ${appData.projects.length}</div>
+                        <div>• Report generated: ${new Date().toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // ===== RENDER ALL =====
+        function renderAll() {
+            // Refresh derived project statuses (late/active) before rendering so workload reflects late projects
+            refreshProjectStatuses();
+            const activePage = document.querySelector('.nav-item.active')?.dataset.page || 'dashboard';
+            navigateTo(activePage);
+        }
+
+        // ===== INITIALIZATION =====
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load data
+            loadData();
+
+            // Set up navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    navigateTo(this.dataset.page);
+                });
+            });
+
+            // Set up Gantt filters
+            document.getElementById('ganttFilter').addEventListener('change', renderGantt);
+            document.getElementById('ganttEngineerFilter').addEventListener('change', renderGantt);
+
+            // Initialize Gantt start date
+            ganttStartDate = new Date();
+            ganttStartDate.setDate(ganttStartDate.getDate() - 3);
+
+            // Initial render
+            renderDashboard();
+        });
+    </script>
+</body>
+</html>
