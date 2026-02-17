@@ -1,6 +1,4 @@
-import unittest
 
-from calculator import Inputs, calc_3ph, calc_rectifier, lookup_last_leq, CB_TABLE, WIRE_TABLE
 
 
 class TestCalculator(unittest.TestCase):
@@ -18,6 +16,7 @@ class TestCalculator(unittest.TestCase):
         out = calc_3ph(Inputs(vdc=600, idc=600, vpri=480))
         self.assertAlmostEqual(out.kva, 484, places=0)
         self.assertEqual(out.cb_secondary, "800")
+
 
 
 if __name__ == "__main__":
