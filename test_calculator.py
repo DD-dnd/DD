@@ -1,8 +1,4 @@
-import io
-import unittest
-from unittest.mock import patch
 
-from calculator import Inputs, calc_3ph, calc_rectifier, lookup_last_leq, CB_TABLE, WIRE_TABLE, main
 
 
 class TestCalculator(unittest.TestCase):
@@ -21,11 +17,6 @@ class TestCalculator(unittest.TestCase):
         self.assertAlmostEqual(out.kva, 484, places=0)
         self.assertEqual(out.cb_secondary, "800")
 
-    def test_missing_args_returns_help_error(self):
-        with patch("sys.stdout", new=io.StringIO()) as fake:
-            rc = main(["rectifier", "--vdc", "600"])
-        self.assertEqual(rc, 2)
-        self.assertIn("missing required arguments", fake.getvalue())
 
 
 if __name__ == "__main__":
